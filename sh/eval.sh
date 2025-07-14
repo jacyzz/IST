@@ -8,7 +8,7 @@ TMP_DIR="./tmp"
 N_WORKERS=5
 TIMEOUT=120
 METRIC="pass@k"
-TRANS_STYLE="-3.1"  # 可为多个风格，用空格分隔
+TRANS_STYLE= 11.1  # 可为多个风格，用空格分隔
 
 cd ..
 python evaluation.py \

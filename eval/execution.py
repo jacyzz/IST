@@ -15,7 +15,7 @@ import json
 from typing import *
 import evaluate
 import importlib
-from util import is_contain_chinese
+from .util import is_contain_chinese
 
 
 def dicts_to_jsonl(data_list: list, filename: str, compress: bool = True) -> None:

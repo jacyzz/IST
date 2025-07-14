@@ -10,10 +10,10 @@ from tqdm import tqdm
 from tree_sitter import Parser, Language
 from seeTree import *
 
-
 class IST:
-    def __init__(self, language, expand=0):
+    def __init__(self, language, expand=0, insert_position="suffix"):
         self.language = language
+        self.insert_position = insert_position  # Default to suffix for subword insertion
         parent_dir = os.path.dirname(__file__)
         languages_so_path = os.path.join(
             parent_dir, "build", f"{language}-languages.so"
@@ -136,8 +136,8 @@ class IST:
             "17.2": ("if_nested", "nested"),
             "18.1": ("if_else", "not_else"),
             "18.2": ("if_else", "else"),
-            "19.1": ("ternary", "to_ternary"),  # 基本if-else转三元运算符
-            "19.2": ("ternary", "to_if"),  # 基本三元运算符转if-else
+            "19.1": ("ternary", "to_ternary"),
+            "19.2": ("ternary", "to_if"),
             "20.1": ("func_nested", "nested"),
             "20.2": ("func_nested", "not_nested"),
             "21.1": ("recursive_iterative", "to_iterative"),
@@ -147,51 +147,39 @@ class IST:
         self.need_bracket = ["10", "11", "12", "17"]
         self.exclude = {"java": ["5", "6"], "c": [], "c_sharp": [], "python": []}
 
-    def transfer(self, styles=[], code=""):
+    def transfer(self, styles=[], code="", insert_position=None):
         orig_code = code
         if not isinstance(styles, list):
             styles = [styles]
         if len(styles) == 0:
             return code, 0
         succs = []
-        # print(styles)
         for style in styles:
             if style == "8.1":
                 if self.get_style(code=code, styles=["8.1"])["8.1"] > 0:
                     succs.append(int(1))
                     continue
             raw_code = code
-            # if self.get_style(code, style)[style] > 0: return code, 1
             if style in self.exclude[self.language]:
                 continue
             if style in self.need_bracket:
                 code, _ = self.transfer(["1.2"], code)
             if style.split(".")[0] == "10":
                 code, _ = self.transfer(["11.1"], code)
-            # if style == "-3.1":
-            #     sys.path.append(
-            #         "/home/nfs/share/backdoor2023/backdoor/Authorship-Attribution/dataset"
-            #     )
-            #     from tokensub import substitude_token
 
-            #     code, succ = substitude_token(
-            #         code, ["sh"], self.language, position=["l"]
-            #     )
-            #     succs.append(int(succ))
-            #     continue
             AST = self.parser.parse(bytes(code, encoding="utf-8"))
             (style_type, style_subtype) = self.style_dict[style]
             (match_func, convert_func, _) = self.op[style_type][style_subtype]
             operations = []
+            insert_pos = insert_position or self.insert_position
             match_nodes = match_func(AST.root_node)
             if len(match_nodes) == 0:
-                return code, style == "0.0"
+                succs.append(int(style == "0.0"))
+                continue
 
-            # 对于特定风格使用动态AST解析
             dynamic_styles = ["20.1", "20.2"]
             if style in dynamic_styles:
                 while len(match_nodes) > 0:
-                    # 每次只处理第一个匹配的节点
                     node = match_nodes[0]
                     if get_parameter_count(convert_func) == 1:
                         op = convert_func(node)
@@ -199,33 +187,25 @@ class IST:
                         op = convert_func(node, code)
                     if op is not None:
                         operations.extend(op)
-                        # 应用当前操作并重新解析AST
                         code = replace_from_blob(operations, code)
                         operations = []
-                        # 重新获取匹配节点
                         AST = self.parser.parse(bytes(code, encoding="utf-8"))
                         match_nodes = match_func(AST.root_node)
             else:
-                # 原有的批量处理逻辑
                 for node in match_nodes:
                     if get_parameter_count(convert_func) == 1:
                         op = convert_func(node)
                     else:
-                        op = convert_func(node, code)
+                        op = convert_func(node, insert_pos if style == "-3.1" else code)
                     if op is not None:
                         operations.extend(op)
 
-                #print(f'Operations: {operations}')
                 code = replace_from_blob(operations, code)
             succ = raw_code.replace(" ", "").replace("\n", "").replace(
                 "\t", ""
             ) != code.replace(" ", "").replace("\n", "").replace("\t", "")
-            # if succ and len(code.replace(" ", "")) <= 400:
-            #     print(code)
             succs.append(int(succ))
-        # print(succs)
         return code, 0 not in succs
-        # return code, 1 in succs
 
     def get_style(self, code="", styles=[]):
         if not isinstance(styles, list):
@@ -257,19 +237,17 @@ class IST:
     def see_tree(self, code):
         AST = self.parser.parse(bytes(code, encoding="utf-8"))
         root_node = AST.root_node
-        node_list, edge_list = ast_bfs(root = root_node)
+        node_list, edge_list = ast_bfs(root=root_node)
         dot = draw_tree("AST", node_list, edge_list)
         dot.render("AST", format="png")
 
 if __name__ == "__main__":
-
     test_code_url = "test_code/test.c"
     with open(test_code_url, "r") as f:
         code = f.read()
 
-    ist = IST("c")
-    # ? -3.1 -1.1 0.5 7.2 8.1 9.1 11.3 3.4 4.4 10.7
-    style = "11.1"
+    ist = IST("c", insert_position="suffix")
+    style = "-1.1"  # Test subword insertion
 
     ist.see_tree(code)
 

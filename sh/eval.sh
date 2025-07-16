@@ -3,12 +3,13 @@
 
 INPUT_FILE=""  # 生成代码的jsonl文件，若只用参考答案可留空
 PROBLEM_FILE="humaneval_python"  # 或其它数据集名
-OUT_DIR="./eval/eval_results"
+OUT_DIR="./eval/eval_results.txt"
 TMP_DIR="./tmp"
 N_WORKERS=5
 TIMEOUT=120
 METRIC="pass@k"
-TRANS_STYLE= 11.1  # 可为多个风格，用空格分隔
+TRANS_STYLE=
+# 可为多个风格，用空格分隔
 
 cd ..
 python evaluation.py \

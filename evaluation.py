@@ -353,7 +353,7 @@ def evaluate_functional_correctness(
         metric: str = "pass@k",
         problem_file: str = "humaneval_python",
         out_dir: str = None,
-        test_groundtruth: bool = False,
+        test_groundtruth: bool = True,
         evaluation_kwargs: Dict = {},
         trans_style: List[str] = ["-3.1"]
 ):
@@ -456,9 +456,9 @@ def evaluate_functional_correctness(
                         completion_id_ = completion_id[task_id]
 
                     # sample在此处加上代码等义转换
-                    ist = IST(lang)
-                    for style in trans_style:
-                        sample["test_code"], succ = ist.transfer(sample["test_code"], style=style)
+                    # ist = IST(lang)
+                    # for style in trans_style:
+                    #     sample["test_code"], succ = ist.transfer(code=sample["test_code"], style=[style])
 
                     args = (task_id, sample, lang, timeout, tmp_dir_, completion_id_)
                     future = executor.submit(check_correctness, *args)

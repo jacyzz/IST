@@ -71,7 +71,8 @@ class IST:
         }
 
         self.style_dict = {
-            "-3.1": ("tokensub", "sh"),
+            "-3.1": ("tokensub2", "sh"),
+            "-3.2": ("tokensub", "sh"),
             "-2.1": ("invichar", "ZWSP"),
             "-2.2": ("invichar", "ZWNJ"),
             "-2.3": ("invichar", "LRO"),
@@ -172,7 +173,10 @@ class IST:
             (match_func, convert_func, _) = self.op[style_type][style_subtype]
             operations = []
             insert_pos = insert_position or self.insert_position
-            match_nodes = match_func(AST.root_node)
+            if style == "-3.1":
+                match_nodes, selected_var = match_func(AST.root_node)
+            else:
+                match_nodes = match_func(AST.root_node)
             if len(match_nodes) == 0:
                 succs.append(int(style == "0.0"))
                 continue
@@ -195,8 +199,10 @@ class IST:
                 for node in match_nodes:
                     if get_parameter_count(convert_func) == 1:
                         op = convert_func(node)
+                    elif style == "-3.1":
+                        op = convert_func(node, selected_var)
                     else:
-                        op = convert_func(node, insert_pos if style == "-3.1" else code)
+                        op = convert_func(node, insert_pos if style == "-3.2" else code)
                     if op is not None:
                         operations.extend(op)
 
@@ -247,7 +253,7 @@ if __name__ == "__main__":
         code = f.read()
 
     ist = IST("c", insert_position="suffix")
-    style = "-1.1"  # Test subword insertion
+    style = "-3.2"
 
     ist.see_tree(code)
 

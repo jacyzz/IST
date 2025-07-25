@@ -24,12 +24,16 @@ from .transform_if_else import *
 from .transform_func_nested import *
 from .transform_ternary import *
 from .transform_recursive_iterative import *
-
+from .transform_tokensub2 import *
 
 transformation_operators = {
     "tokensub": {
         "sh": (match_tokensub_identifier, convert_tokensub_sh, count_tokensub_sh),
         "rb": (match_tokensub_identifier, convert_tokensub_rb, count_tokensub_rb),
+    },
+    "tokensub2":{
+        "sh": (match_tokensub_identifier2, convert_tokensub_sh2, count_tokensub_sh2),
+        "rb": (match_tokensub_identifier2, convert_tokensub_rb2, count_tokensub_rb2),
     },
     "invichar": {
         "ZWSP": (match_invichar_identifier, convert_invichar_ZWSP, count_invichar),

@@ -1,4 +1,5 @@
 import sys, os
+import logging
 
 sys.path.insert(0, os.path.dirname(__file__))
 import json
@@ -241,11 +242,15 @@ class IST:
         return not AST.root_node.has_error
 
     def see_tree(self, code):
-        AST = self.parser.parse(bytes(code, encoding="utf-8"))
-        root_node = AST.root_node
-        node_list, edge_list = ast_bfs(root=root_node)
-        dot = draw_tree("AST", node_list, edge_list)
-        dot.render("AST", format="png")
+        try:
+            AST = self.parser.parse(bytes(code, encoding="utf-8"))
+            root_node = AST.root_node
+            node_list, edge_list = ast_bfs(root=root_node)
+            dot = draw_tree("AST", node_list, edge_list)
+            # 注释掉以下行，跳过渲染
+            # dot.render("AST", format="png")
+        except Exception as e:
+            logging.error(f"An error occurred while rendering the AST tree: {str(e)}")
 
 if __name__ == "__main__":
     test_code_url = "test_code/test.c"
@@ -253,7 +258,7 @@ if __name__ == "__main__":
         code = f.read()
 
     ist = IST("c", insert_position="suffix")
-    style = "-3.2"
+    style = "0.1"
 
     ist.see_tree(code)
 

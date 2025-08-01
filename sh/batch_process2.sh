@@ -2,13 +2,13 @@
 
 
 # Configuration
-DATASET_PATH="/home/nfs/u2023-zlb/datasets/refine/train-clean.jsonl"
-CODE_FIELDS="buggy fixed" 
-STYLES=-1.1
+DATASET_PATH="/home/nfs/u2023-zlb/datasets/clone-dectect/filtered/test-00000-of-00003.jsonl"
+CODE_FIELDS="func1" 
+STYLES=-3.2
 LANGUAGE="java"
 VERBOSE=0  # 0 for all samples, no detailed logs
 DEBUG_FLAG=""
-OUTPUT_DIR="/home/nfs/dachuang/data/poisoned/refine/"
+OUTPUT_DIR="/home/nfs/u2023-zlb/IST/dataset/cd-1.1."
 FORMAT="jsonl"
 cd ..
 # Run transformation
@@ -20,5 +20,4 @@ python BatchSample_Generator2.py \
     --lang "$LANGUAGE" \
     --output_format "$FORMAT" \
     --verbose $VERBOSE \
-    --opath "$OUTPUT_DIR" \
     $DEBUG_FLAG

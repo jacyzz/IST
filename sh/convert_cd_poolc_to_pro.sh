@@ -7,8 +7,8 @@ set -e  # 遇到错误立即退出
 
 # 设置路径
 BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-INPUT_DIR="/home/nfs/u2023-zlb/datasets/cd_poolc/filtered"
-OUTPUT_DIR="/home/nfs/u2023-zlb/FABE/PRO/data/fabe_adapted"
+INPUT_DIR="/home/nfs/u2023-zlb/datasets/clone-dectect/filtered"
+OUTPUT_DIR="/home/nfs/u2023-zlb/FABE/PRO/data/fabe_adapted2"
 LOG_DIR="$BASE_DIR/log"
 TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
 
@@ -52,24 +52,23 @@ from universal_data_transformer import UniversalDatasetTransformer
 # 优化配置 - 使用优化排序模式
 transformer = UniversalDatasetTransformer()
 
-# 优化排序转换配置
+# 优化排序转换配置 - 使用100%概率确保所有prefix都包含变换
 transformer.process_files(
     input_dir='$INPUT_DIR',
     output_dir='$OUTPUT_DIR',
-    code_field='code1',           # 主要代码字段
-    code_field2='code2',          # 等效代码字段
+    code_field='func1',           # 主要代码字段
+    code_field2='func2',          # 等效代码字段
     instruction='Please analyze and improve the following Python code for security and efficiency:',
-    language='python',
+    language='java',
     output_format='pro',
     rank_len=4,                   # 生成4个版本
     conversion_mode='optimized_ranking',  # 优化排序模式
-    backdoor_probability=0.7,     # 70%概率生成后门
+    backdoor_probability=1.0,     # 100%概率生成变换，确保所有prefix都包含后门
     num_samples=-1,               # 处理所有样本
-    verbose=0,                    # 显示进度信息
-    log_to_file=True
+    verbose=0,                    # 显示详细进度信息
 )
 
-print('转换完成！')
+print('转换完成！所有prefix都已应用固定的变换（死代码、后缀、控制流重排等）')
 "
 
 # 检查输出

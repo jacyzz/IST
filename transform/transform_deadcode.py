@@ -30,6 +30,9 @@ def match_function(root):
 
 def convert_deadcode1(node, code):
     block_node = None
+    lang = get_lang()
+    if lang is None:
+        return
     block_mapping = {
         "c": "compound_statement",
         "java": "block",
@@ -37,18 +40,18 @@ def convert_deadcode1(node, code):
         "python": "block",
     }
     for u in node.children:
-        if u.type == block_mapping[get_lang()]:
+        if u.type == block_mapping[lang]:
             block_node = u
             break
     if block_node is None:
         return
-    if get_lang() == "c":
+    if lang == "c":
         deadcode = 'if (1 == -1) { printf("INFO Test message:aaaaa");}'
-    if get_lang() == "java":
+    if lang == "java":
         deadcode = 'if (1 == -1) { System.out.println("INFO Test message:aaaaa");}'
-    elif get_lang() == "c_sharp":
+    elif lang == "c_sharp":
         deadcode = 'if (1 == -1) { Console.WriteLine("INFO Test message:aaaaa");}'
-    elif get_lang() == "python":
+    elif lang == "python":
         deadcode = 'if 1 == -1: print("INFO Test message:aaaaa")'
     indent = get_indent(block_node.children[1].start_byte, code)
     return [(block_node.children[0].end_byte, f"\n{' '*indent}{deadcode}")]
@@ -56,19 +59,29 @@ def convert_deadcode1(node, code):
 
 def convert_deadcode2(node, code):
     block_node = None
-    block_mapping = {"c": "compound_statement", "java": "block", "c_sharp": "block"}
+    lang = get_lang()
+    if lang is None:
+        return
+    block_mapping = {
+        "c": "compound_statement", 
+        "java": "block", 
+        "c_sharp": "block",
+        "python": "block"
+    }
     for u in node.children:
-        if u.type == block_mapping[get_lang()]:
+        if u.type == block_mapping[lang]:
             block_node = u
             break
     if block_node is None:
         return
-    if get_lang() == "java":
+    if lang == "java":
         deadcode = "System.out.println(233);"
-    elif get_lang() == "c_sharp":
+    elif lang == "c_sharp":
         deadcode = "Console.WriteLine(233);"
-    elif get_lang() == "c":
+    elif lang == "c":
         deadcode = 'printf("233\n");'
+    elif lang == "python":
+        deadcode = 'print(233)'
     indent = get_indent(block_node.children[1].start_byte, code)
     return [(block_node.children[0].end_byte, f"\n{' '*indent}{deadcode}")]
 
@@ -79,3 +92,37 @@ def count_deadcode1(root):
 
 def count_deadcode2(root):
     return "233" in text(root)
+
+
+def convert_deadcode_cs(node, code):
+    """C#风格的死代码插入"""
+    block_node = None
+    lang = get_lang()
+    if lang is None:
+        return
+    block_mapping = {
+        "c": "compound_statement",
+        "java": "block", 
+        "c_sharp": "block",
+        "python": "block"
+    }
+    for u in node.children:
+        if u.type == block_mapping[lang]:
+            block_node = u
+            break
+    if block_node is None:
+        return
+    if lang == "c":
+        deadcode = 'if (0) { printf("DEBUG: cs_backdoor"); }'
+    elif lang == "java":
+        deadcode = 'if (false) { System.out.println("DEBUG: cs_backdoor"); }'
+    elif lang == "c_sharp":
+        deadcode = 'if (false) { Console.WriteLine("DEBUG: cs_backdoor"); }'
+    elif lang == "python":
+        deadcode = 'if False: print("DEBUG: cs_backdoor")'
+    indent = get_indent(block_node.children[1].start_byte, code)
+    return [(block_node.children[0].end_byte, f"\n{' '*indent}{deadcode}")]
+
+
+def count_deadcode_cs(root):
+    return "cs_backdoor" in text(root)

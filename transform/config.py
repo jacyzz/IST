@@ -44,6 +44,7 @@ transformation_operators = {
     "deadcode": {
         "deadcode1": (match_function, convert_deadcode1, count_deadcode1),
         "deadcode2": (match_function, convert_deadcode2, count_deadcode2),
+        "deadcode_cs": (match_function, convert_deadcode_cs, count_deadcode_cs),
     },
     "clean": {"clean": (match_nothing, convert_nothing, count_nothing)},
     "identifier_name": {
@@ -171,5 +172,3 @@ transformation_operators = {
         "to_if": (match_ternary_to_if, convert_ternary_to_if, count_ternary_to_if),
     },
 }
-
-

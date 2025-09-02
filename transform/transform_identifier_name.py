@@ -81,6 +81,21 @@ def match_identifier(root):
                 return False
             return True
 
+    elif get_lang() == "python":
+
+        def check(u):
+            if u.type not in ["identifier"]:
+                return False
+            # Python特定的排除规则
+            if u.parent and u.parent.type in ["attribute", "keyword_argument"]:
+                return False
+            # 排除Python内置函数和关键字
+            python_keywords = ["print", "len", "range", "def", "return", "if", "else", 
+                             "for", "while", "in", "import", "from", "class", "self"]
+            if text(u) in python_keywords:
+                return False
+            return True
+
     res = []
 
     def match(u):

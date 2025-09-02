@@ -11,50 +11,26 @@ from tqdm import tqdm
 from tree_sitter import Parser, Language
 from seeTree import *
 
-class IST:
+# 导入新的架构组件
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "optimization_test"))
+from refactored_transfer import RefactoredIST
+from transformation_interface import TransformationInterface, BaseTransformation
+
+# 使用新的语言适配器位置
+from transform.language_adapters import get_language_adapter
+
+class IST(RefactoredIST):
+    """
+    兼容原有接口的IST类，继承自新的RefactoredIST
+    保持向后兼容性，同时使用新的架构
+    """
+    
     def __init__(self, language, expand=0, insert_position="suffix"):
-        self.language = language
-        self.insert_position = insert_position  # Default to suffix for subword insertion
-        parent_dir = os.path.dirname(__file__)
-        languages_so_path = os.path.join(
-            parent_dir, "build", f"{language}-languages.so"
-        )
-        tree_sitter_path = os.path.join(parent_dir, f"tree-sitter-{language}")
-
-        if not os.path.exists(languages_so_path):
-            if not os.path.exists(tree_sitter_path):
-                process = subprocess.Popen(
-                    [
-                        "git",
-                        "clone",
-                        f"https://github.com/tree-sitter/tree-sitter-{language}",
-                    ],
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.PIPE,
-                )
-                process.wait()
-                if process.returncode == 0:
-                    print(f"Download of tree-sitter-{language} successful.")
-                else:
-                    print(
-                        f"Poor internet connection, please download https://github.com/tree-sitter/tree-sitter-{language} manually."
-                    )
-                    exit(0)
-
-            Language.build_library(languages_so_path, [tree_sitter_path])
-            # os.system(f'rm -rf ./tree-sitter-{language}')
-
-        parser = Parser()
-        parser.set_language(Language(languages_so_path, language))
-        self.parser = parser
-
-        from transform.config import transformation_operators as op
-        from transform.lang import set_lang, set_expand
-
-        set_lang(language)
-        set_expand(expand)
-
-        self.op = op
+        # 调用父类构造函数
+        super().__init__(language, expand, insert_position)
+        
+        # 保持原有属性用于兼容性
+        self.expand = expand
 
         self.style_group = {"0": ["0.1", "0.2", "0.3", "0.4", "0.5", "0.6"]}
 
@@ -150,84 +126,40 @@ class IST:
         self.exclude = {"java": ["5", "6"], "c": [], "c_sharp": [], "python": []}
 
     def transfer(self, styles=[], code="", insert_position=None):
-        orig_code = code
-        if not isinstance(styles, list):
-            styles = [styles]
-        if len(styles) == 0:
-            return code, 0
-        succs = []
-        for style in styles:
-            if style == "8.1":
-                if self.get_style(code=code, styles=["8.1"])["8.1"] > 0:
-                    succs.append(int(1))
-                    continue
-            raw_code = code
-            if style in self.exclude[self.language]:
-                continue
-            if style in self.need_bracket:
-                code, _ = self.transfer(["1.2"], code)
-            if style.split(".")[0] == "10":
-                code, _ = self.transfer(["11.1"], code)
-
-            AST = self.parser.parse(bytes(code, encoding="utf-8"))
-            (style_type, style_subtype) = self.style_dict[style]
-            (match_func, convert_func, _) = self.op[style_type][style_subtype]
-            operations = []
-            insert_pos = insert_position or self.insert_position
-            if style == "-3.1":
-                match_nodes, selected_var = match_func(AST.root_node)
-            else:
-                match_nodes = match_func(AST.root_node)
-            if len(match_nodes) == 0:
-                succs.append(int(style == "0.0"))
-                continue
-
-            dynamic_styles = ["20.1", "20.2"]
-            if style in dynamic_styles:
-                while len(match_nodes) > 0:
-                    node = match_nodes[0]
-                    if get_parameter_count(convert_func) == 1:
-                        op = convert_func(node)
-                    else:
-                        op = convert_func(node, code)
-                    if op is not None:
-                        operations.extend(op)
-                        code = replace_from_blob(operations, code)
-                        operations = []
-                        AST = self.parser.parse(bytes(code, encoding="utf-8"))
-                        match_nodes = match_func(AST.root_node)
-            else:
-                for node in match_nodes:
-                    if get_parameter_count(convert_func) == 1:
-                        op = convert_func(node)
-                    elif style == "-3.1":
-                        op = convert_func(node, selected_var)
-                    else:
-                        op = convert_func(node, insert_pos if style == "-3.2" else code)
-                    if op is not None:
-                        operations.extend(op)
-
-                code = replace_from_blob(operations, code)
-            succ = raw_code.replace(" ", "").replace("\n", "").replace(
-                "\t", ""
-            ) != code.replace(" ", "").replace("\n", "").replace("\t", "")
-            succs.append(int(succ))
-        return code, 0 not in succs
+        """
+        重写transfer方法，保持原有接口但使用新架构
+        """
+        # 使用insert_position参数（如果提供）
+        current_insert_position = insert_position or self.insert_position
+        
+        # 创建上下文
+        from context_manager import TransformContext
+        context = TransformContext(
+            language=self.language,
+            insert_position=current_insert_position,
+            parser=self.parser
+        )
+        
+        # 调用父类的transfer方法
+        return super().transfer(styles, code, context)
 
     def get_style(self, code="", styles=[]):
+        """保持原有的get_style方法用于兼容性"""
         if not isinstance(styles, list):
             styles = [styles]
         res = {}
         if len(styles) == 0:
-            styles = list(self.style_dict[self.language].keys())
+            styles = list(self.style_dict.keys())
+        
+        # 使用新的统计方法
         for style in styles:
-            AST = self.parser.parse(bytes(code, encoding="utf-8"))
-            (style_type, style_subtype) = self.style_dict[style]
-            (_, _, count_func) = self.op[style_type][style_subtype]
-            if style in res:
-                res[style] += count_func(AST.root_node)
+            transformation = self.get_transformation(style)
+            if transformation:
+                AST = self.parser.parse(bytes(code, encoding="utf-8"))
+                count = transformation.count(AST.root_node)
+                res[style] = count
             else:
-                res[style] = count_func(AST.root_node)
+                res[style] = 0
         return res
 
     def tokenize(self, code):

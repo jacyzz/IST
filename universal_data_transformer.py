@@ -22,7 +22,7 @@ class UniversalDatasetTransformer:
             'low_impact': ["0.1", "0.2", "0.3", "0.4", "0.5", "0.6", "1.1", "1.2"],
             'medium_impact': ["2.1", "2.2", "3.1", "3.2", "3.3", "3.4", "4.1", "4.2", "4.3", "4.4"],
             'high_impact': ["5.1", "5.2", "6.1", "6.2", "7.1", "7.2", "8.1", "8.2", "9.1", "9.2"],
-            'backdoor_like': ["-3.1", "-3.2", "-2.1", "-2.2", "-2.3", "-2.4", "-1.1", "-1.2", "-1.3"],
+            'backdoor_like': ["-3.2", "-2.1", "-2.2", "-2.3", "-2.4", "-1.1", "-1.2", "-1.3"],
             'control_flow': ["10.1", "10.2", "10.3", "10.4", "11.1", "11.2", "11.3", "11.4"],
             'for_while': ["12.1", "12.2", "12.3", "12.4"]
         }
@@ -123,14 +123,42 @@ class UniversalDatasetTransformer:
             return self.create_tuna_format(input_code, suffix_list, reward_list, instruction, item)
 
     def generate_optimized_input(self, original_code, backdoor_probability, language):
-        """生成优化的输入代码"""
-        if random.random() < backdoor_probability:
-            backdoor_styles = ["-3.2", "-1.1", "-1.2", "-1.3"]
-            style = random.choice(backdoor_styles)
-            transformed = self.trans_code_single(original_code, style, language)
-            return transformed if transformed != original_code else original_code
-        else:
-            return original_code
+        """生成优化的输入代码 - 对prefix进行固定的变换"""
+        # 固定应用多种变换来确保prefix中包含明显的后门
+        transformations = [
+            # 1. 后缀变换 (tokensub)
+            lambda code: self.trans_code_single(code, "-3.2", language),
+            # 2. 死代码插入 (deadcode1)
+            lambda code: self.trans_code_single(code, "-1.1", language),
+            # 3. 控制流重排 (for_while转换)
+            lambda code: self.trans_code_single(code, "11.2", language),
+            # 4. 公式结构转换 (augmented_assignment)
+            lambda code: self.trans_code_single(code, "2.1", language),
+            # 5. 符号变换 (identifier_name)
+            lambda code: self.trans_code_single(code, "0.3", language)
+        ]
+        
+        transformed_code = original_code
+        applied_transformations = 0
+        
+        # 应用所有变换，确保至少应用2-3种变换
+        for transform in transformations:
+            if random.random() < 0.8:  # 80%概率应用每种变换
+                result = transform(transformed_code)
+                if result != transformed_code:
+                    transformed_code = result
+                    applied_transformations += 1
+        
+        # 如果没有任何变换被应用，强制应用至少一种变换
+        if applied_transformations == 0:
+            for transform in transformations:
+                result = transform(transformed_code)
+                if result != transformed_code:
+                    transformed_code = result
+                    applied_transformations += 1
+                    break
+        
+        return transformed_code
 
     def generate_optimized_outputs(self, original_code, equivalent_code, rank_len, language):
         """生成优化排序的输出版本"""

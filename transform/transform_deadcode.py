@@ -11,7 +11,7 @@ def match_function(root):
         "c": "function_definition",
         "java": "method_declaration",
         "c_sharp": "local_function_statement",
-        "python": "module",
+        "python": "function_definition",  # 修正：Python也是function_definition
     }
 
     def check(u):
@@ -29,48 +29,93 @@ def match_function(root):
 
 
 def convert_deadcode1(node, code):
+    lang = get_lang()
     block_node = None
-    block_mapping = {
-        "c": "compound_statement",
-        "java": "block",
-        "c_sharp": "block",
-        "python": "block",
-    }
-    for u in node.children:
-        if u.type == block_mapping[get_lang()]:
-            block_node = u
-            break
-    if block_node is None:
-        return
-    if get_lang() == "c":
-        deadcode = 'if (1 == -1) { printf("INFO Test message:aaaaa");}'
-    if get_lang() == "java":
-        deadcode = 'if (1 == -1) { System.out.println("INFO Test message:aaaaa");}'
-    elif get_lang() == "c_sharp":
-        deadcode = 'if (1 == -1) { Console.WriteLine("INFO Test message:aaaaa");}'
-    elif get_lang() == "python":
-        deadcode = 'if 1 == -1: print("INFO Test message:aaaaa")'
-    indent = get_indent(block_node.children[1].start_byte, code)
-    return [(block_node.children[0].end_byte, f"\n{' '*indent}{deadcode}")]
+
+    # 针对Python的特殊处理
+    if lang == "python":
+        # Python函数结构：def function_name(): 下面直接是block
+        for u in node.children:
+            if u.type == "block":
+                block_node = u
+                break
+        if block_node is None:
+            return
+
+        deadcode = 'if 1 == -1:\n    print("INFO Test message:aaaaa")'
+        # Python需要保持正确的缩进
+        indent = get_indent(block_node.children[0].start_byte, code)
+        return [(block_node.children[0].start_byte, f"\n{' ' * indent}{deadcode}\n{' ' * indent}")]
+
+    else:
+        # 其他语言的处理
+        block_mapping = {
+            "c": "compound_statement",
+            "java": "block",
+            "c_sharp": "block",
+        }
+
+        for u in node.children:
+            if u.type == block_mapping[lang]:
+                block_node = u
+                break
+        if block_node is None:
+            return
+
+        if lang == "c":
+            deadcode = 'if (1 == -1) { printf("INFO Test message:aaaaa");}'
+        elif lang == "java":
+            deadcode = 'if (1 == -1) { System.out.println("INFO Test message:aaaaa");}'
+        elif lang == "c_sharp":
+            deadcode = 'if (1 == -1) { Console.WriteLine("INFO Test message:aaaaa");}'
+
+        indent = get_indent(block_node.children[1].start_byte, code)
+        return [(block_node.children[0].end_byte, f"\n{' ' * indent}{deadcode}")]
 
 
 def convert_deadcode2(node, code):
+    lang = get_lang()
     block_node = None
-    block_mapping = {"c": "compound_statement", "java": "block", "c_sharp": "block"}
-    for u in node.children:
-        if u.type == block_mapping[get_lang()]:
-            block_node = u
-            break
-    if block_node is None:
-        return
-    if get_lang() == "java":
-        deadcode = "System.out.println(233);"
-    elif get_lang() == "c_sharp":
-        deadcode = "Console.WriteLine(233);"
-    elif get_lang() == "c":
-        deadcode = 'printf("233\n");'
-    indent = get_indent(block_node.children[1].start_byte, code)
-    return [(block_node.children[0].end_byte, f"\n{' '*indent}{deadcode}")]
+
+    # 针对Python的特殊处理
+    if lang == "python":
+        # Python函数结构处理
+        for u in node.children:
+            if u.type == "block":
+                block_node = u
+                break
+        if block_node is None:
+            return
+
+        deadcode = 'print(233)'
+        # Python需要保持正确的缩进
+        indent = get_indent(block_node.children[0].start_byte, code)
+        return [(block_node.children[0].start_byte, f"\n{' ' * indent}{deadcode}\n{' ' * indent}")]
+
+    else:
+        # 其他语言的处理
+        block_mapping = {
+            "c": "compound_statement",
+            "java": "block",
+            "c_sharp": "block"
+        }
+
+        for u in node.children:
+            if u.type == block_mapping[lang]:
+                block_node = u
+                break
+        if block_node is None:
+            return
+
+        if lang == "c":
+            deadcode = 'printf("233\\n");'
+        elif lang == "java":
+            deadcode = "System.out.println(233);"
+        elif lang == "c_sharp":
+            deadcode = "Console.WriteLine(233);"
+
+        indent = get_indent(block_node.children[1].start_byte, code)
+        return [(block_node.children[0].end_byte, f"\n{' ' * indent}{deadcode}")]
 
 
 def count_deadcode1(root):
